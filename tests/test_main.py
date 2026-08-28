@@ -1,6 +1,6 @@
 import pytest
 
-from src.main import Category, Product
+from src.main import Category, Product, load_categories_from_json
 
 
 @pytest.fixture
@@ -47,3 +47,32 @@ def test_product_count_increments(products: list[Product]) -> None:
     Category("Смартфоны", "Описание", products)
 
     assert Category.product_count == count_before + len(products)
+
+
+def test_load_categories_from_json(tmp_path):
+    """Проверяем, что категории и товары корректно загружаются из JSON-файла."""
+    json_content = """
+    [
+        {
+            "name": "Ноутбуки",
+            "description": "Описание категории",
+            "products": [
+                                {
+                    "name": "MacBook Air",
+                    "description": "M2, 256GB",
+                    "price": 120000.0,
+                    "quantity": 3,
+                }
+            ]
+        }
+    ]
+    """
+    json_file = tmp_path / "test_products.json"
+    json_file.write_text(json_content, encoding="utf-8")
+
+    categories = load_categories_from_json(json_file)
+
+    assert len(categories) == 1
+    assert categories[0].name == "Ноутбуки"
+    assert len(categories[0].products) == 1
+    assert categories[0].products[0].name == "MacBook Air"

@@ -1,3 +1,7 @@
+import json
+from pathlib import Path
+
+
 class Product:
     """Класс для представления товара в магазине."""
 
@@ -34,6 +38,32 @@ class Category:
         Category.product_count += len(products)
 
 
+def load_categories_from_json(file_path: Path) -> list[Category]:
+    """Загружает категории и товары из JSON-файла и создает объекты классов."""
+    with open(file_path, encoding="utf-8") as file:
+        raw_categories = json.load(file)
+
+    categories = []
+    for raw_category in raw_categories:
+        products = [
+            Product(
+                raw_product["name"],
+                raw_product["description"],
+                raw_product["price"],
+                raw_product["quantity"],
+            )
+            for raw_product in raw_category["products"]
+        ]
+        category = Category(
+            raw_category["name"],
+            raw_category["description"],
+            products,
+        )
+        categories.append(category)
+
+    return categories
+
+
 if __name__ == "__main__":  # pragma: no cover
     product1 = Product("Samsung Galaxy S23 Ultra", "256GB, Серый цвет, 200MP камера", 180000.0, 5)
     product2 = Product("Iphone 15", "512GB, Gray space", 210000.0, 8)
@@ -64,3 +94,7 @@ if __name__ == "__main__":  # pragma: no cover
     print(len(category2.products))
     print(Category.category_count)
     print(Category.product_count)
+
+    loaded_categories = load_categories_from_json(Path(__file__).parent.parent / "products.json")
+    for loaded_category in loaded_categories:
+        print(loaded_category.name, len(loaded_category.products))
