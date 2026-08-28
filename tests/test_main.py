@@ -57,11 +57,11 @@ def test_load_categories_from_json(tmp_path):
             "name": "Ноутбуки",
             "description": "Описание категории",
             "products": [
-                                {
+                {
                     "name": "MacBook Air",
                     "description": "M2, 256GB",
                     "price": 120000.0,
-                    "quantity": 3,
+                    "quantity": 3
                 }
             ]
         }
