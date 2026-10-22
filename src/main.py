@@ -1,5 +1,11 @@
 import json
 from pathlib import Path
+from typing import Any
+
+
+def _format_price(price: float) -> str:
+    """Форматирует цену: целые значения без дробной части, иначе как есть."""
+    return str(int(price)) if float(price).is_integer() else str(price)
 
 
 class Product:
@@ -7,15 +13,63 @@ class Product:
 
     name: str
     description: str
-    price: float
     quantity: int
+    __price: float
 
     def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
-        """Инициализирует товар с указанными характеристиками."""
+        """Инициализирует товар. Цена должна быть строго положительной."""
+        if price <= 0:
+            raise ValueError("Цена не должна быть нулевая или отрицательная")
         self.name = name
         self.description = description
-        self.price = price
+        self.__price = price
         self.quantity = quantity
+
+    @property
+    def price(self) -> float:
+        """Геттер: возвращает текущую цену товара."""
+        return self.__price
+
+    @price.setter
+    def price(self, new_price: float) -> None:
+        """Сеттер цены: отклоняет неположительные значения, а понижение требует подтверждения."""
+        if new_price <= 0:
+            print("Цена не должна быть нулевая или отрицательная")
+            return
+
+        if new_price < self.__price:
+            answer = input(
+                f"Цена понижается: {_format_price(self.__price)} -> "
+                f"{_format_price(new_price)}. Подтвердить? (y/n): "
+            )
+            if answer.strip().lower() != "y":
+                return
+
+        self.__price = new_price
+
+    @classmethod
+    def new_product(
+        cls,
+        product_data: dict[str, Any],
+        products: list["Product"] | None = None,
+    ) -> "Product":
+        """Создает товар из словаря.
+
+        Если передан список products и в нем уже есть товар с таким же названием,
+        то у найденного товара суммируется количество, цена берется максимальная,
+        и возвращается именно найденный (обновленный) объект.
+        """
+        name = product_data["name"]
+        price = product_data["price"]
+        quantity = product_data["quantity"]
+
+        for existing in products or []:
+            if existing.name.strip().lower() == name.strip().lower():
+                existing.quantity += quantity
+                existing.price = max(existing.price, price)
+                return existing
+
+        return cls(name, product_data["description"], price, quantity)
 
 
 class Category:
@@ -23,7 +77,7 @@ class Category:
 
     name: str
     description: str
-    products: list[Product]
+    __products: list[Product]
 
     category_count: int = 0
     product_count: int = 0
@@ -32,10 +86,28 @@ class Category:
         """Инициализирует категорию и обновляет общие счетчики класса."""
         self.name = name
         self.description = description
-        self.products = products
+        self.__products = list(products)
 
         Category.category_count += 1
-        Category.product_count += len(products)
+        Category.product_count += len(self.__products)
+
+    def add_product(self, product: Product) -> None:
+        """Добавляет товар в категорию. Один и тот же объект дважды не добавляется."""
+        if not isinstance(product, Product):
+            raise TypeError("В категорию можно добавить только объект класса Product")
+        if product in self.__products:
+            return
+        self.__products.append(product)
+        Category.product_count += 1
+
+    @property
+    def products(self) -> str:
+        """Геттер: товары категории строками «Название, N руб. Остаток: M шт.»."""
+        return "".join(
+            f"{product.name}, {_format_price(product.price)} руб. "
+            f"Остаток: {product.quantity} шт.\n"
+            for product in self.__products
+        )
 
 
 def load_categories_from_json(file_path: Path) -> list[Category]:
@@ -45,21 +117,8 @@ def load_categories_from_json(file_path: Path) -> list[Category]:
 
     categories = []
     for raw_category in raw_categories:
-        products = [
-            Product(
-                raw_product["name"],
-                raw_product["description"],
-                raw_product["price"],
-                raw_product["quantity"],
-            )
-            for raw_product in raw_category["products"]
-        ]
-        category = Category(
-            raw_category["name"],
-            raw_category["description"],
-            products,
-        )
-        categories.append(category)
+        products = [Product.new_product(raw_product) for raw_product in raw_category["products"]]
+        categories.append(Category(raw_category["name"], raw_category["description"], products))
 
     return categories
 
@@ -73,28 +132,25 @@ if __name__ == "__main__":  # pragma: no cover
         "Смартфоны",
         "Смартфоны, как средство не только коммуникации, "
         "но и получения дополнительных функций для удобства жизни",
+        [product1, product2],
+    )
+    category1.add_product(product3)
+    print(category1.products)
+
+    duplicate = Product.new_product(
+        {
+            "name": "Iphone 15",
+            "description": "512GB, Gray space",
+            "price": 230000.0,
+            "quantity": 2,
+        },
         [product1, product2, product3],
     )
+    category1.add_product(duplicate)
+    print(category1.products)
 
-    print(category1.name)
-    print(category1.description)
-    print(len(category1.products))
-    print(Category.category_count)
-    print(Category.product_count)
+    product1.price = 0
+    product1.price = 190000.0
+    print(product1.price)
 
-    product4 = Product("55\" QLED 4K", "Фоновая подсветка", 123000.0, 7)
-    category2 = Category(
-        "Телевизоры",
-        "Современный телевизор, который позволяет наслаждаться просмотром, "
-        "станет вашим другом и помощником",
-        [product4],
-    )
-
-    print(category2.name)
-    print(len(category2.products))
-    print(Category.category_count)
-    print(Category.product_count)
-
-    loaded_categories = load_categories_from_json(Path(__file__).parent.parent / "products.json")
-    for loaded_category in loaded_categories:
-        print(loaded_category.name, len(loaded_category.products))
+    print(Category.category_count, Category.product_count)
