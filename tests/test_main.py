@@ -3,7 +3,7 @@ from typing import Any
 
 import pytest
 
-from src.main import Category, Product, load_categories_from_json
+from src.main import Category, CategoryIterator, Product, load_categories_from_json
 
 
 @pytest.fixture(autouse=True)
@@ -211,3 +211,37 @@ def test_price_setter_lowering_requires_confirmation(
     product.price = 100000.0
 
     assert product.price == expected
+
+def test_product_str(product: Product) -> None:
+    """Магический метод __str__ для Product работает корректно."""
+    assert str(product) == "Samsung Galaxy S23 Ultra, 180000 руб. Остаток: 5 шт."
+
+
+def test_category_str(category: Category) -> None:
+    """Магический метод __str__ для Category считает общее количество продуктов на складе."""
+    # product1 (5 шт) + product2 (8 шт) = 13 шт
+    assert str(category) == "Смартфоны, количество продуктов: 13 шт."
+
+
+def test_product_add(products: list[Product]) -> None:
+    """Магический метод __add__ складывает общую стоимость товаров (цена * количество)."""
+    p1, p2 = products[0], products[1]
+    # p1: 180000 * 5 = 900000
+    # p2: 210000 * 8 = 1680000
+    # Итог = 2580000.0
+    assert p1 + p2 == 2580000.0
+
+
+def test_product_add_type_error(product: Product) -> None:
+    """При попытке сложить Product с объектом другого типа выбрасывается TypeError."""
+    with pytest.raises(TypeError, match="Складывать можно только объекты класса Product"):
+        product + 100  # type: ignore
+
+
+def test_category_iterator(category: Category, products: list[Product]) -> None:
+    """CategoryIterator корректно перебирает товары в категории."""
+    iterator = CategoryIterator(category)
+    result = list(iterator)
+    assert len(result) == 2
+    assert result[0].name == products[0].name
+    assert result[1].name == products[1].name
