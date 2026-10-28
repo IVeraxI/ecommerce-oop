@@ -30,9 +30,10 @@ class Product:
         return f"{self.name}, {_format_price(self.price)} руб. Остаток: {self.quantity} шт."
 
     def __add__(self, other: "Product") -> float:
-        """Сложение товаров: сумма произведений цены на количество."""
-        if not isinstance(other, Product):
-            raise TypeError("Складывать можно только объекты класса Product")
+        """Сложение товаров: сумма произведений цены на количество.
+        Складывать можно только объекты одного и того же класса."""
+        if type(self) is not type(other):
+            raise TypeError("Складывать можно только товары одного и того же класса")
         return (self.price * self.quantity) + (other.price * other.quantity)
 
     @property
@@ -162,3 +163,45 @@ if __name__ == "__main__":  # pragma: no cover
     # Итератор
     for item in CategoryIterator(category1):
         print(item.name)
+
+
+class Smartphone(Product):
+    """Класс для смартфона, наследуется от Product."""
+
+    def __init__(
+        self,
+        name:str,
+        description:str,
+        price:float,
+        quantity:int,
+        efficiency:float,
+        model: str,
+        memory: int,
+        color: str,
+    ) -> None:
+        """Инициализирует смартфон, расширяя базовый товар."""
+        super().__init__(name, description, price, quantity)
+        self.efficiency = efficiency
+        self.model = model
+        self.memory = memory
+        self.color = color
+
+
+class LawnGrass(Product):
+    """Класс для газонной травы, наследуется от Product."""
+
+    def __init__(
+        self,
+        name:str,
+        description:str,
+        price:float,
+        quantity:int,
+        country: str,
+        germination_period: int,
+        color: str,
+    ) -> None:
+        """Инициализирует газонную траву, расширяя базовый товар."""
+        super().__init__(name, description, price, quantity)
+        self.country = country
+        self.germination_period = germination_period
+        self.color = color
