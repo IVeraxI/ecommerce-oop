@@ -25,6 +25,17 @@ class Product:
         self.__price = price
         self.quantity = quantity
 
+    def __str__(self) -> str:
+        """Строковое отображение товара."""
+        return f"{self.name}, {_format_price(self.price)} руб. Остаток: {self.quantity} шт."
+
+    def __add__(self, other: "Product") -> float:
+        """Сложение товаров: сумма произведений цены на количество.
+        Складывать можно только объекты одного и того же класса."""
+        if type(self) is not type(other):
+            raise TypeError("Складывать можно только товары одного и того же класса")
+        return (self.price * self.quantity) + (other.price * other.quantity)
+
     @property
     def price(self) -> float:
         """Геттер: возвращает текущую цену товара."""
@@ -53,12 +64,7 @@ class Product:
         product_data: dict[str, Any],
         products: list["Product"] | None = None,
     ) -> "Product":
-        """Создает товар из словаря.
-
-        Если передан список products и в нем уже есть товар с таким же названием,
-        то у найденного товара суммируется количество, цена берется максимальная,
-        и возвращается именно найденный (обновленный) объект.
-        """
+        """Создает товар из словаря. Дубликаты суммируют остаток и обновляют цену."""
         name = product_data["name"]
         price = product_data["price"]
         quantity = product_data["quantity"]
@@ -91,6 +97,11 @@ class Category:
         Category.category_count += 1
         Category.product_count += len(self.__products)
 
+    def __str__(self) -> str:
+        """Строковое отображение категории с общим количеством товаров."""
+        total_quantity = sum(product.quantity for product in self.__products)
+        return f"{self.name}, количество продуктов: {total_quantity} шт."
+
     def add_product(self, product: Product) -> None:
         """Добавляет товар в категорию. Один и тот же объект дважды не добавляется."""
         if not isinstance(product, Product):
@@ -102,12 +113,28 @@ class Category:
 
     @property
     def products(self) -> str:
-        """Геттер: товары категории строками «Название, N руб. Остаток: M шт.»."""
-        return "".join(
-            f"{product.name}, {_format_price(product.price)} руб. "
-            f"Остаток: {product.quantity} шт.\n"
-            for product in self.__products
-        )
+        """Геттер: товары категории строками."""
+        return "".join(f"{str(product)}\n" for product in self.__products)
+
+
+class CategoryIterator:
+    """Вспомогательный класс для итерации по товарам одной категории."""
+
+    def __init__(self, category: Category) -> None:
+        self._category = category
+        self._index = -1
+
+    def __iter__(self) -> "CategoryIterator":
+        self._index = -1
+        return self
+
+    def __next__(self) -> Product:
+        # Получаем доступ к приватному списку продуктов через name mangling
+        products = self._category._Category__products
+        if self._index + 1 < len(products):
+            self._index += 1
+            return products[self._index]
+        raise StopIteration
 
 
 def load_categories_from_json(file_path: Path) -> list[Category]:
@@ -128,29 +155,53 @@ if __name__ == "__main__":  # pragma: no cover
     product2 = Product("Iphone 15", "512GB, Gray space", 210000.0, 8)
     product3 = Product("Xiaomi Redmi Note 11", "1024GB, Синий", 31000.0, 14)
 
-    category1 = Category(
-        "Смартфоны",
-        "Смартфоны, как средство не только коммуникации, "
-        "но и получения дополнительных функций для удобства жизни",
-        [product1, product2],
-    )
-    category1.add_product(product3)
-    print(category1.products)
+    category1 = Category("Смартфоны", "Современные гаджеты", [product1, product2])
+    print(str(product1))
+    print(str(category1))
+    print(product1 + product2)
 
-    duplicate = Product.new_product(
-        {
-            "name": "Iphone 15",
-            "description": "512GB, Gray space",
-            "price": 230000.0,
-            "quantity": 2,
-        },
-        [product1, product2, product3],
-    )
-    category1.add_product(duplicate)
-    print(category1.products)
+    # Итератор
+    for item in CategoryIterator(category1):
+        print(item.name)
 
-    product1.price = 0
-    product1.price = 190000.0
-    print(product1.price)
 
-    print(Category.category_count, Category.product_count)
+class Smartphone(Product):
+    """Класс для смартфона, наследуется от Product."""
+
+    def __init__(
+        self,
+        name:str,
+        description:str,
+        price:float,
+        quantity:int,
+        efficiency:float,
+        model: str,
+        memory: int,
+        color: str,
+    ) -> None:
+        """Инициализирует смартфон, расширяя базовый товар."""
+        super().__init__(name, description, price, quantity)
+        self.efficiency = efficiency
+        self.model = model
+        self.memory = memory
+        self.color = color
+
+
+class LawnGrass(Product):
+    """Класс для газонной травы, наследуется от Product."""
+
+    def __init__(
+        self,
+        name:str,
+        description:str,
+        price:float,
+        quantity:int,
+        country: str,
+        germination_period: int,
+        color: str,
+    ) -> None:
+        """Инициализирует газонную траву, расширяя базовый товар."""
+        super().__init__(name, description, price, quantity)
+        self.country = country
+        self.germination_period = germination_period
+        self.color = color

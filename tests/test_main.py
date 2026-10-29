@@ -3,7 +3,7 @@ from typing import Any
 
 import pytest
 
-from src.main import Category, Product, load_categories_from_json
+from src.main import Category, CategoryIterator, Product, Smartphone, LawnGrass, load_categories_from_json
 
 
 @pytest.fixture(autouse=True)
@@ -211,3 +211,68 @@ def test_price_setter_lowering_requires_confirmation(
     product.price = 100000.0
 
     assert product.price == expected
+
+def test_product_str(product: Product) -> None:
+    """Магический метод __str__ для Product работает корректно."""
+    assert str(product) == "Samsung Galaxy S23 Ultra, 180000 руб. Остаток: 5 шт."
+
+
+def test_category_str(category: Category) -> None:
+    """Магический метод __str__ для Category считает общее количество продуктов на складе."""
+    # product1 (5 шт) + product2 (8 шт) = 13 шт
+    assert str(category) == "Смартфоны, количество продуктов: 13 шт."
+
+
+def test_product_add(products: list[Product]) -> None:
+    """Магический метод __add__ складывает общую стоимость товаров (цена * количество)."""
+    p1, p2 = products[0], products[1]
+    # p1: 180000 * 5 = 900000
+    # p2: 210000 * 8 = 1680000
+    # Итог = 2580000.0
+    assert p1 + p2 == 2580000.0
+
+
+def test_product_add_type_error(product: Product) -> None:
+    """При попытке сложить Product с объектом другого типа выбрасывается TypeError."""
+    with pytest.raises(TypeError, match="Складывать можно только товары одного и того же класса"):
+        product + 100  # type: ignore
+
+
+def test_category_iterator(category: Category, products: list[Product]) -> None:
+    """CategoryIterator корректно перебирает товары в категории."""
+    iterator = CategoryIterator(category)
+    result = list(iterator)
+    assert len(result) == 2
+    assert result[0].name == products[0].name
+    assert result[1].name == products[1].name
+# ---------- Задания урока 4 (Наследование) ----------
+
+def test_smartphone_init() -> None:
+    """Проверка инициализации класса Smartphone."""
+    phone = Smartphone("iPhone 15", "Apple", 100000.0, 10, 99.9, "Pro", 256, "Titanium")
+    assert phone.name == "iPhone 15"
+    assert phone.memory == 256
+    assert phone.price == 100000.0
+
+
+def test_lawn_grass_init() -> None:
+    """Проверка инициализации класса LawnGrass."""
+    grass = LawnGrass("Трава", "Густая", 1000.0, 50, "Россия", 14, "Зеленый")
+    assert grass.country == "Россия"
+    assert grass.germination_period == 14
+    assert grass.name == "Трава"
+
+
+def test_add_different_product_types() -> None:
+    """При попытке сложить объекты разных классов выбрасывается TypeError."""
+    phone = Smartphone("iPhone", "Apple", 100000.0, 1, 99.9, "15", 256, "Black")
+    grass = LawnGrass("Трава", "Густая", 1000.0, 1, "Россия", 14, "Зеленый")
+    base_product = Product("Тест", "Базовый", 100.0, 1)
+
+    # Нельзя сложить телефон и траву
+    with pytest.raises(TypeError, match="Складывать можно только товары одного и того же класса"):
+        phone + grass  # type: ignore
+
+    # Нельзя сложить базовый товар и телефон
+    with pytest.raises(TypeError, match="Складывать можно только товары одного и того же класса"):
+        base_product + phone  # type: ignore
