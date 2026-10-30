@@ -276,3 +276,10 @@ def test_add_different_product_types() -> None:
     # Нельзя сложить базовый товар и телефон
     with pytest.raises(TypeError, match="Складывать можно только товары одного и того же класса"):
         base_product + phone  # type: ignore
+
+
+def test_mixin_log(capsys: pytest.CaptureFixture[str]) -> None:
+    """Проверка работы миксина MixinLog при создании товара."""
+    Product("Тест", "Описание", 100.0, 1)
+    captured = capsys.readouterr()
+    assert captured.out.strip() == "Product('Тест', 'Описание', 100.0, 1)"

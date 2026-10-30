@@ -1,6 +1,30 @@
 import json
 from pathlib import Path
 from typing import Any
+from abc import ABC, abstractmethod
+
+
+class BaseProduct(ABC):
+    """Абстрактный базовый класс для всех продуктов."""
+
+    @classmethod
+    @abstractmethod
+    def new_product(cls, *args, **kwargs) -> "BaseProduct":
+        """Создает новый товар. Обязателен для переопределения."""
+        pass
+
+
+class MixinLog:
+    """Миксин для логирования создания объектов."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        """Печатает лог при создании объекта и передает вызов дальше по MRO."""
+        print(repr(self))
+        super().__init__(*args, **kwargs)
+
+    def __repr__(self) -> str:
+        """Определяет формат вывода лога."""
+        return f"{self.__class__.__name__}('{self.name}', '{self.description}', {self.price}, {self.quantity})"
 
 
 def _format_price(price: float) -> str:
@@ -8,7 +32,7 @@ def _format_price(price: float) -> str:
     return str(int(price)) if float(price).is_integer() else str(price)
 
 
-class Product:
+class Product(BaseProduct, MixinLog):
     """Класс для представления товара в магазине."""
 
     name: str
@@ -24,6 +48,9 @@ class Product:
         self.description = description
         self.__price = price
         self.quantity = quantity
+
+        # Вызываем __init__ у MixinLog через MRO
+        super().__init__()
 
     def __str__(self) -> str:
         """Строковое отображение товара."""
