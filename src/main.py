@@ -41,7 +41,9 @@ class Product(BaseProduct, MixinLog):
     __price: float
 
     def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
-        """Инициализирует товар. Цена должна быть строго положительной."""
+        """Инициализирует товар. Цена > 0, количество != 0."""
+        if quantity == 0:
+            raise ValueError("Товар с нулевым количеством не может быть добавлен")
         if price <= 0:
             raise ValueError("Цена не должна быть нулевая или отрицательная")
         self.name = name
@@ -142,6 +144,14 @@ class Category:
     def products(self) -> str:
         """Геттер: товары категории строками."""
         return "".join(f"{str(product)}\n" for product in self.__products)
+
+    def average_price(self) -> float:
+        """Подсчитывает средний ценник всех товаров в категории."""
+        try:
+            total_price = sum(product.price for product in self.__products)
+            return total_price / len(self.__products)
+        except ZeroDivisionError:
+            return 0.0
 
 
 class CategoryIterator:

@@ -283,3 +283,20 @@ def test_mixin_log(capsys: pytest.CaptureFixture[str]) -> None:
     Product("Тест", "Описание", 100.0, 1)
     captured = capsys.readouterr()
     assert captured.out.strip() == "Product('Тест', 'Описание', 100.0, 1)"
+
+
+def test_product_init_zero_quantity() -> None:
+    """При создании товара с нулевым количеством выбрасывается ValueError."""
+    with pytest.raises(ValueError, match="Товар с нулевым количеством не может быть добавлен"):
+        Product("Воздух", "Ничего", 1000.0, 0)
+
+def test_category_average_price(category: Category) -> None:
+    """Средний ценник считается корректно (сумма цен / количество уникальных товаров)."""
+    # В фикстуре category у нас 2 товара: 180000.0 и 210000.0
+    # Среднее: (180000.0 + 210000.0) / 2 = 195000.0
+    assert category.average_price() == 195000.0
+
+def test_category_average_price_empty() -> None:
+    """Если в категории нет товаров, средний ценник равен 0 (обработка ZeroDivisionError)."""
+    empty_category = Category("Пустая", "Нет товаров", [])
+    assert empty_category.average_price() == 0.0
